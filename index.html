@@ -367,23 +367,35 @@ IP: ${t.ip || ''}`.trim();
     }
   });
 
-  // ================= Background image =================
-  const bgUpload = PNB-BarPendry-Floorplan.jpg('bgUpload');
-  const floorImage = PNB-BarPendry-Floorplan.jpg('floorImage');
-  (function(){
+<!-- ================= Background image ================= -->
+<script>
+  const bgUpload   = document.getElementById('bgUpload');
+  const floorImage = document.getElementById('floorImage');
+
+  (function () {
     const saved = localStorage.getItem('floor_bg');
-    if(saved){ floorImage.src = saved; }
+    if (saved) {
+      // Use stored background if available (from a previous upload)
+      floorImage.src = saved;
+    } else {
+      // Fallback to the repo image that sits next to index.html
+      floorImage.src = "PNB-BarPendry-Floorplan.jpg";
+    }
   })();
-  bgUpload.addEventListener('change', (e)=>{
+
+  // Keep your existing upload handler below
+  bgUpload.addEventListener('change', (e) => {
     const file = e.target.files && e.target.files[0];
-    if(!file) return;
+    if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev)=>{
+    reader.onload = (ev) => {
       floorImage.src = ev.target.result;
-      try{ localStorage.setItem('floor_bg', ev.target.result); }catch(err){}
+      try { localStorage.setItem('floor_bg', ev.target.result); } catch (err) {}
     };
     reader.readAsDataURL(file);
   });
+</script>
+``
 
   // ================= UI controls =================
   const toggleMove = document.getElementById('toggleMove');
