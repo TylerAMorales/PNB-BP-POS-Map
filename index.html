@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -43,6 +42,7 @@
       background:#164e63;
       border-color:#0ea5e9;
     }
+
     #mapContainer{
       position:relative;
       width:100%;
@@ -64,6 +64,7 @@
       position:absolute;
       inset:0;
     }
+
     /* POS terminals (green) */
     .terminal{
       position:absolute;
@@ -81,6 +82,7 @@
       box-shadow: 0 2px 8px rgba(0,0,0,.35);
       border:1px solid rgba(255,255,255,.15);
     }
+
     /* Info pins (blue) */
     .pin{
       position:absolute;
@@ -99,6 +101,7 @@
       box-shadow:0 2px 8px rgba(0,0,0,.35);
       border:1px solid rgba(255,255,255,.2);
     }
+
     /* Drag mode visuals */
     body.drag-mode .terminal,
     body.drag-mode .pin{
@@ -107,6 +110,7 @@
     body.placing-pin #mapContainer{
       cursor:crosshair;
     }
+
     /* Side panel */
     #panel{
       position:fixed;
@@ -121,6 +125,7 @@
       z-index: 20;
     }
     .hidden{ display:none; }
+
     #panel h2{
       margin: 0 0 12px 0;
       font-size: 18px;
@@ -143,6 +148,7 @@
       color:#e2e8f0;
     }
     #panel textarea{ min-height: 80px; resize: vertical; }
+
     .panel-actions{
       display:flex; gap:10px; margin-top:10px;
     }
@@ -163,8 +169,8 @@
     <button id="toggleMove" aria-pressed="false" title="Enable/Disable dragging of markers">Enable Move</button>
     <button id="addPin" title="Add a blue info pin">Add Info Pin</button>
     <button id="resetPositions" title="Reset POS terminals to default positions">Reset POS Positions</button>
-    <button id="exportBtn" title="Download all POS & Info Pins to an Excel file">Export Data</button>
   </header>
+
   <div id="mapContainer">
     <img id="floorImage" alt="Floor plan" />
     <div id="terminalsLayer"></div>
@@ -172,9 +178,11 @@
 
   <div id="panel" class="hidden">
     <h2 id="panelTitle"></h2>
+
     <label>Name
       <input id="nameInput" />
     </label>
+
     <div class="terminal-only">
       <label>Serial Number
         <input id="snInput" />
@@ -189,9 +197,11 @@
         <input id="passInput" />
       </label>
     </div>
+
     <label>Notes
       <textarea id="notesInput"></textarea>
     </label>
+
     <div class="panel-actions">
       <button id="saveBtn">Save</button>
       <button id="deleteBtn" class="danger hidden">Delete</button>
@@ -202,14 +212,15 @@
   <script>
   'use strict';
   // ================= Data & Persistence =================
-  const defaultTerminals = [
-    { id:"POS1", name:"SVC1", x:830, y:300, sn:"", ip:"", user:"", pass:"", notes:"" },
-    { id:"POS2", name:"SVC2", x:735, y:230, sn:"", ip:"", user:"", pass:"", notes:"" },
-    { id:"POS3", name:"SVC3", x:460, y:450, sn:"", ip:"", user:"", pass:"", notes:"" },
-    { id:"POS4", name:"SVC6", x:480, y:120, sn:"", ip:"", user:"", pass:"", notes:"" },
-    { id:"POS5", name:"SVC7", x:920, y:470, sn:"", ip:"", user:"", pass:"", notes:"" },
-    { id:"POS6", name:"SVC8", x:750, y:300, sn:"", ip:"", user:"", pass:"", notes:"" }
-  ];
+const defaultTerminals = [
+  { id:"POS1", name:"SVC1", x:830, y:300, sn:"", ip:"", user:"", pass:"", notes:"" },
+  { id:"POS2", name:"SVC2", x:735, y:230, sn:"", ip:"", user:"", pass:"", notes:"" },
+  { id:"POS3", name:"SVC3", x:460, y:450, sn:"", ip:"", user:"", pass:"", notes:"" },
+  { id:"POS4", name:"SVC6", x:480, y:120, sn:"", ip:"", user:"", pass:"", notes:"" },
+  { id:"POS5", name:"SVC7", x:920, y:470, sn:"", ip:"", user:"", pass:"", notes:"" },
+  { id:"POS6", name:"SVC8", x:750, y:300, sn:"", ip:"", user:"", pass:"", notes:"" }
+];
+
   let terminals = JSON.parse(JSON.stringify(defaultTerminals));
   let pins = []; // { id, name, x, y, notes }
 
@@ -224,11 +235,10 @@
     try{
       const parsed = JSON.parse(stored);
       if(Array.isArray(parsed)){
-        // Backward compatibility with older structure that stored only terminals array
         terminals = parsed; pins = [];
       }else{
-        terminals = Array.isArray(parsed.terminals) ? parsed.terminals : terminals;
-        pins = Array.isArray(parsed.pins) ? parsed.pins : [];
+        terminals = parsed.terminals || terminals;
+        pins = parsed.pins || [];
       }
     }catch(e){ console.warn('Load failed', e); }
   }
@@ -241,15 +251,18 @@
   const layer = document.getElementById('terminalsLayer');
   const mapContainer = document.getElementById('mapContainer');
   const panel = document.getElementById('panel');
-  const nameInput = document.getElementById('nameInput');
-  const snInput = document.getElementById('snInput');
-  const ipInput = document.getElementById('ipInput');
-  const userInput = document.getElementById('userInput');
-  const passInput = document.getElementById('passInput');
+
+  const nameInput  = document.getElementById('nameInput');
+  const snInput    = document.getElementById('snInput');
+  const ipInput    = document.getElementById('ipInput');
+  const userInput  = document.getElementById('userInput');
+  const passInput  = document.getElementById('passInput');
   const notesInput = document.getElementById('notesInput');
+
   const deleteBtn = document.getElementById('deleteBtn');
   const saveBtn = document.getElementById('saveBtn');
   const closeBtn = document.getElementById('closeBtn');
+
   const terminalOnlyBlocks = document.querySelectorAll('.terminal-only');
 
   let current = null; // selected item (terminal or pin)
@@ -266,16 +279,14 @@
 
   // ================= Render =================
   function drawAll(){ layer.innerHTML = ''; drawTerminals(); drawPins(); }
+
   function drawTerminals(){
     terminals.forEach(t=>{
       const el = document.createElement('div');
       el.className = 'terminal';
       el.style.left = t.x + 'px';
       el.style.top = t.y + 'px';
-      el.textContent = t.name || t.id;
-      el.title = `${t.id}
-SN: ${t.sn || ''}
-IP: ${t.ip || ''}`.trim();
+      el.textContent = t.name;
       el.addEventListener('click', (e)=>{ e.stopPropagation(); openPanel(t, 'terminal'); });
       dragElement(el, t);
       layer.appendChild(el);
@@ -294,6 +305,7 @@ IP: ${t.ip || ''}`.trim();
       layer.appendChild(el);
     });
   }
+
   function dragElement(el, data){
     let offsetX=0, offsetY=0;
     el.addEventListener('mousedown', (e)=>{
@@ -302,6 +314,7 @@ IP: ${t.ip || ''}`.trim();
       const rect = el.getBoundingClientRect();
       offsetX = e.clientX - rect.left;
       offsetY = e.clientY - rect.top;
+
       function onMove(ev){
         const layerRect = layer.getBoundingClientRect();
         data.x = ev.clientX - layerRect.left - offsetX;
@@ -325,10 +338,13 @@ IP: ${t.ip || ''}`.trim();
   function openPanel(item, type){
     current = item;
     currentType = type || (item && ('sn' in item) ? 'terminal' : 'pin');
+
     panel.classList.remove('hidden');
     document.getElementById('panelTitle').innerText = current.name || (currentType === 'pin' ? 'Info' : '');
+
     nameInput.value = current.name || '';
     notesInput.value = current.notes || '';
+
     if(currentType === 'terminal'){
       snInput.value = current.sn || '';
       ipInput.value = current.ip || '';
@@ -342,7 +358,9 @@ IP: ${t.ip || ''}`.trim();
       snInput.value = ipInput.value = userInput.value = passInput.value = '';
     }
   }
+
   closeBtn.addEventListener('click', ()=> panel.classList.add('hidden'));
+
   saveBtn.addEventListener('click', ()=>{
     if(!current) return;
     current.name = nameInput.value;
@@ -356,6 +374,7 @@ IP: ${t.ip || ''}`.trim();
     saveData();
     drawAll();
   });
+
   deleteBtn.addEventListener('click', ()=>{
     if(!current || currentType !== 'pin') return;
     const idx = pins.findIndex(p=>p.id === current.id);
@@ -367,35 +386,23 @@ IP: ${t.ip || ''}`.trim();
     }
   });
 
-<!-- ================= Background image ================= -->
-<script>
-  const bgUpload   = document.getElementById('bgUpload');
+  // ================= Background image =================
+  const bgUpload = document.getElementById('bgUpload');
   const floorImage = document.getElementById('floorImage');
-
-  (function () {
+  (function(){
     const saved = localStorage.getItem('floor_bg');
-    if (saved) {
-      // Use stored background if available (from a previous upload)
-      floorImage.src = saved;
-    } else {
-      // Fallback to the repo image that sits next to index.html
-      floorImage.src = "PNB-BarPendry-Floorplan.jpg";
-    }
+    if(saved){ floorImage.src = saved; }
   })();
-
-  // Keep your existing upload handler below
-  bgUpload.addEventListener('change', (e) => {
+  bgUpload.addEventListener('change', (e)=>{
     const file = e.target.files && e.target.files[0];
-    if (!file) return;
+    if(!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = (ev)=>{
       floorImage.src = ev.target.result;
-      try { localStorage.setItem('floor_bg', ev.target.result); } catch (err) {}
+      try{ localStorage.setItem('floor_bg', ev.target.result); }catch(err){}
     };
     reader.readAsDataURL(file);
   });
-</script>
-``
 
   // ================= UI controls =================
   const toggleMove = document.getElementById('toggleMove');
@@ -405,13 +412,16 @@ IP: ${t.ip || ''}`.trim();
     toggleMove.textContent = on ? 'Disable Move' : 'Enable Move';
     setDragEnabled(on);
   });
+
   document.getElementById('addPin').addEventListener('click', ()=>{
     startPlacingPin();
   });
+
   document.getElementById('resetPositions').addEventListener('click', ()=>{
     resetToDefaults();
     drawAll();
   });
+
   mapContainer.addEventListener('click', (e)=>{
     if(!placingPin) return;
     const rect = layer.getBoundingClientRect();
@@ -424,74 +434,6 @@ IP: ${t.ip || ''}`.trim();
     stopPlacingPin();
     openPanel(newPin, 'pin');
   });
-
-  // ================= Export to Excel (SpreadsheetML 2003) =================
-  function xmlEscape(v){
-    return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
-  }
-  function sheetXml(name, rows){
-    const cols = rows.length ? rows[0].length : 0;
-    const colDefs = Array.from({length: cols}).map(()=>'<Column ss:AutoFitWidth="1"/>').join('');
-    const rowXml = rows.map(r => {
-      const cells = r.map(v => `<Cell><Data ss:Type="String">${xmlEscape(v)}</Data></Cell>`).join('');
-      return `<Row>${cells}</Row>`;
-    }).join('');
-    return `
-      <Worksheet ss:Name="${xmlEscape(name)}">
-        <Table>${colDefs}${rowXml}</Table>
-      </Worksheet>`;
-  }
-  function buildWorkbookXml(){
-    const terminalHeaders = ["ID","Name","Serial #","IP","User","Password","Notes","X","Y"];
-    const terminalRows = [terminalHeaders].concat(
-      terminals.map(t => [t.id, t.name||'', t.sn||'', t.ip||'', t.user||'', t.pass||'', t.notes||'', String(t.x||0), String(t.y||0)])
-    );
-    const pinHeaders = ["ID","Name","Notes","X","Y"];
-    const pinRows = [pinHeaders].concat(
-      pins.map(p => [p.id, p.name||'', p.notes||'', String(p.x||0), String(p.y||0)])
-    );
-    const workbook = `<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?>
-      <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
-        xmlns:o="urn:schemas-microsoft-com:office:office"
-        xmlns:x="urn:schemas-microsoft-com:office:excel"
-        xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
-        xmlns:html="http://www.w3.org/TR/REC-html40">
-        <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
-          <Author>Micros Map</Author>
-          <Created>${new Date().toISOString()}</Created>
-        </DocumentProperties>
-        <ExcelWorkbook xmlns="urn:schemas-microsoft-com:office:excel">
-          <WindowHeight>9000</WindowHeight>
-          <WindowWidth>13860</WindowWidth>
-          <ProtectStructure>False</ProtectStructure>
-          <ProtectWindows>False</ProtectWindows>
-        </ExcelWorkbook>
-        ${sheetXml('POS Terminals', terminalRows)}
-        ${sheetXml('Info Pins', pinRows)}
-      </Workbook>`;
-    return workbook;
-  }
-  function exportToExcel(){
-    try{
-      // Ensure we export the latest persisted data
-      loadData();
-      const xml = buildWorkbookXml();
-      const blob = new Blob([xml], {type: 'application/vnd.ms-excel'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      const date = new Date().toISOString().slice(0,10);
-      a.href = url;
-      a.download = `MicrosMap_Data_${date}.xls`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(()=>URL.revokeObjectURL(url), 5000);
-    }catch(err){
-      alert('Export failed: '+err.message);
-      console.error(err);
-    }
-  }
-  document.getElementById('exportBtn').addEventListener('click', exportToExcel);
 
   // ================= Init =================
   loadData();
